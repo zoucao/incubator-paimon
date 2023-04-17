@@ -18,6 +18,11 @@
 
 package org.apache.paimon.spark;
 
+import org.apache.paimon.CoreOptions;
+import org.apache.paimon.WriteMode;
+import org.apache.paimon.options.Options;
+import org.apache.paimon.table.FileStoreTable;
+import org.apache.paimon.table.Table;
 import org.apache.paimon.table.source.ReadBuilder;
 import org.apache.paimon.table.source.Split;
 
@@ -30,6 +35,7 @@ import org.apache.spark.sql.connector.read.SupportsReportStatistics;
 import org.apache.spark.sql.types.StructType;
 
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalLong;
 
 /**
@@ -40,11 +46,13 @@ import java.util.OptionalLong;
 public class SparkScan implements Scan, SupportsReportStatistics {
 
     private final ReadBuilder readBuilder;
+    private final Table table;
 
     private List<Split> splits;
 
-    public SparkScan(ReadBuilder readBuilder) {
+    public SparkScan(ReadBuilder readBuilder, Table table) {
         this.readBuilder = readBuilder;
+        this.table = table;
     }
 
     @Override
@@ -70,7 +78,11 @@ public class SparkScan implements Scan, SupportsReportStatistics {
 
             @Override
             public PartitionReaderFactory createReaderFactory() {
-                return new SparkReaderFactory(readBuilder);
+                if (useBatchRead()) {
+                    return new SparkColumnarReaderFactory(readBuilder);
+                } else {
+                    return new SparkReaderFactory(readBuilder);
+                }
             }
         };
     }
@@ -123,5 +135,17 @@ public class SparkScan implements Scan, SupportsReportStatistics {
     @Override
     public int hashCode() {
         return readBuilder.hashCode();
+    }
+
+    private boolean useBatchRead() {
+        // todo: support primary key table
+        CoreOptions coreOptions = CoreOptions.fromMap(table.options());
+        if (table instanceof FileStoreTable &&
+            coreOptions.readBatchSize() > 1 &&
+            coreOptions.writeMode() == WriteMode.APPEND_ONLY) {
+            return true;
+        }
+        return false;
+
     }
 }
