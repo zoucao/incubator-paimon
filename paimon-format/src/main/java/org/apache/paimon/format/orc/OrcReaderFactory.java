@@ -159,8 +159,8 @@ public class OrcReaderFactory implements FormatReaderFactory {
             this.orcVectorizedRowBatch = checkNotNull(orcVectorizedRowBatch);
             this.recycler = checkNotNull(recycler);
             this.paimonColumnBatch = paimonColumnBatch;
-            this.result =
-                    new ColumnarRowIterator(new ColumnarRow(paimonColumnBatch), this::recycle);
+            this.result = null;
+                    //new ColumnarRowIterator(new ColumnarRow(paimonColumnBatch), this::recycle);
         }
 
         /**

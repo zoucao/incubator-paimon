@@ -118,6 +118,12 @@ public class AppendOnlyFileStoreTable extends AbstractFileStoreTable {
             public RecordReader<InternalRow> createReader(Split split) throws IOException {
                 return read.createReader((DataSplit) split);
             }
+
+            @Override
+            public InnerTableRead withColumnarReader(boolean useColumnarReader) {
+                read.withColumnarReader(useColumnarReader);
+                return this;
+            }
         };
     }
 

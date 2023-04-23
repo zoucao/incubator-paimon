@@ -36,6 +36,7 @@ public class ReadBuilderImpl implements ReadBuilder {
 
     private Predicate filter;
     private int[][] projection;
+    private boolean useColumnarReader;
 
     public ReadBuilderImpl(InnerTable table) {
         this.table = table;
@@ -61,6 +62,12 @@ public class ReadBuilderImpl implements ReadBuilder {
     }
 
     @Override
+    public ReadBuilder withColumnarReader(boolean useColumnarReader) {
+        this.useColumnarReader = useColumnarReader;
+        return this;
+    }
+
+    @Override
     public ReadBuilder withProjection(int[][] projection) {
         this.projection = projection;
         return this;
@@ -78,7 +85,7 @@ public class ReadBuilderImpl implements ReadBuilder {
 
     @Override
     public TableRead newRead() {
-        InnerTableRead read = table.newRead().withFilter(filter);
+        InnerTableRead read = table.newRead().withFilter(filter).withColumnarReader(useColumnarReader);
         if (projection != null) {
             read.withProjection(projection);
         }

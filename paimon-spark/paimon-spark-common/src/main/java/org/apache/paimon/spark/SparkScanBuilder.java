@@ -18,7 +18,6 @@
 
 package org.apache.paimon.spark;
 
-import org.apache.paimon.options.Options;
 import org.apache.paimon.predicate.Predicate;
 import org.apache.paimon.table.Table;
 
@@ -82,6 +81,7 @@ public class SparkScanBuilder
     @Override
     public Scan build() {
         return new SparkScan(
-                table.newReadBuilder().withFilter(predicates).withProjection(projectedFields), table);
+                table.newReadBuilder().withFilter(predicates).withProjection(projectedFields),
+                table);
     }
 }

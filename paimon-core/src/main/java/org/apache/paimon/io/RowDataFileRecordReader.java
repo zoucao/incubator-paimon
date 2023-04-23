@@ -20,6 +20,7 @@ package org.apache.paimon.io;
 
 import org.apache.paimon.casting.CastFieldGetter;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.data.columnar.ColumnarRowIterator;
 import org.apache.paimon.format.FormatReaderFactory;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.fs.Path;
@@ -55,12 +56,16 @@ public class RowDataFileRecordReader implements RecordReader<InternalRow> {
         RecordIterator<InternalRow> iterator = reader.readBatch();
         return iterator == null
                 ? null
-                : new RowDataFileRecordIterator(iterator, indexMapping, castMapping);
+                : new RowDataFileRecordIterator(convertColumnarToRow(iterator), indexMapping, castMapping);
     }
 
     @Override
     public void close() throws IOException {
         reader.close();
+    }
+
+    private RecordIterator<InternalRow> convertColumnarToRow(RecordIterator<InternalRow> iterator) {
+        return new ColumnarRowIterator(iterator);
     }
 
     private static class RowDataFileRecordIterator extends AbstractFileRecordIterator<InternalRow> {

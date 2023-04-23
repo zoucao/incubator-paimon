@@ -20,7 +20,6 @@ package org.apache.paimon.spark;
 
 import org.apache.paimon.CoreOptions;
 import org.apache.paimon.WriteMode;
-import org.apache.paimon.options.Options;
 import org.apache.paimon.table.FileStoreTable;
 import org.apache.paimon.table.Table;
 import org.apache.paimon.table.source.ReadBuilder;
@@ -35,7 +34,6 @@ import org.apache.spark.sql.connector.read.SupportsReportStatistics;
 import org.apache.spark.sql.types.StructType;
 
 import java.util.List;
-import java.util.Map;
 import java.util.OptionalLong;
 
 /**
@@ -140,12 +138,12 @@ public class SparkScan implements Scan, SupportsReportStatistics {
     private boolean useBatchRead() {
         // todo: support primary key table
         CoreOptions coreOptions = CoreOptions.fromMap(table.options());
-        if (table instanceof FileStoreTable &&
-            coreOptions.readBatchSize() > 1 &&
-            coreOptions.writeMode() == WriteMode.APPEND_ONLY) {
+        if (table instanceof FileStoreTable
+                && coreOptions.readBatchSize() > 1
+                && coreOptions.writeMode() == WriteMode.APPEND_ONLY) {
+            readBuilder.withColumnarReader(true);
             return true;
         }
         return false;
-
     }
 }

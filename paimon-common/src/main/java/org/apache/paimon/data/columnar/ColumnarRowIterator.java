@@ -20,9 +20,11 @@ package org.apache.paimon.data.columnar;
 
 import org.apache.paimon.data.InternalRow;
 import org.apache.paimon.reader.RecordReader;
+import org.apache.paimon.utils.Preconditions;
 import org.apache.paimon.utils.RecyclableIterator;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 
 /**
  * A {@link RecordReader.RecordIterator} that returns {@link InternalRow}s. The next row is set by
@@ -30,14 +32,15 @@ import javax.annotation.Nullable;
  */
 public class ColumnarRowIterator extends RecyclableIterator<InternalRow> {
 
-    private final ColumnarRow rowData;
+    private ColumnarRow rowData;
+    private final RecordReader.RecordIterator<InternalRow> iterator;
 
     private int num;
     private int pos;
 
-    public ColumnarRowIterator(ColumnarRow rowData, @Nullable Runnable recycler) {
-        super(recycler);
-        this.rowData = rowData;
+    public ColumnarRowIterator(RecordReader.RecordIterator<InternalRow> iterator) {
+        super(null);
+        this.iterator = iterator;
     }
 
     public void set(int num) {
@@ -47,12 +50,33 @@ public class ColumnarRowIterator extends RecyclableIterator<InternalRow> {
 
     @Nullable
     @Override
-    public InternalRow next() {
-        if (pos < num) {
-            rowData.setRowId(pos++);
-            return rowData;
-        } else {
-            return null;
+    public InternalRow next() throws IOException {
+        while (true) {
+            if (rowData == null) {
+                InternalRow nextColumnar = iterator.next();
+                if (nextColumnar == null) {
+                    iterator.releaseBatch();
+                    return null;
+                } else {
+                    Preconditions.
+                        checkArgument(nextColumnar instanceof ColumnarRow,
+                            "ColumnarRowIterator only accept ColumnarRow as input");
+                    rowData = (ColumnarRow) nextColumnar;
+                    set(rowData.getNumRows());
+                }
+            } else if (pos < num) {
+                rowData.setRowId(pos++);
+                return rowData;
+            } else {
+                rowData = null;
+            }
+        }
+    }
+
+    @Override
+    public void releaseBatch() {
+        if (iterator != null) {
+            iterator.releaseBatch();
         }
     }
 }

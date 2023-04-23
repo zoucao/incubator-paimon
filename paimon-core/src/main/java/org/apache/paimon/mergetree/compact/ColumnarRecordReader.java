@@ -18,20 +18,56 @@
 package org.apache.paimon.mergetree.compact;
 
 import org.apache.paimon.reader.RecordReader;
+import org.apache.paimon.utils.Preconditions;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 
-public class ColumnarRecordReader <T> implements RecordReader<T> {
+public class ColumnarRecordReader<T> implements RecordReader<T> {
 
-  @Nullable
-  @Override
-  public RecordIterator<T> readBatch() throws IOException {
-    return null;
-  }
 
-  @Override
-  public void close() throws IOException {
+    private final Queue<ConcatRecordReader.ReaderSupplier<T>> queue;
 
-  }
+    private RecordReader<T> current;
+
+    protected ColumnarRecordReader(List<ConcatRecordReader.ReaderSupplier<T>> readerFactories) {
+        readerFactories.forEach(
+            supplier ->
+                Preconditions.checkNotNull(supplier, "Reader factory must not be null."));
+        this.queue = new LinkedList<>(readerFactories);
+    }
+
+    public static <R> RecordReader<R> create(List<ConcatRecordReader.ReaderSupplier<R>> readers) throws IOException {
+        return readers.size() == 1 ? readers.get(0).get() : new ColumnarRecordReader<>(readers);
+    }
+
+    @Nullable
+    @Override
+    public RecordIterator<T> readBatch() throws IOException {
+        while (true) {
+            if (current != null) {
+                RecordIterator<T> iterator = current.readBatch();
+                if (iterator != null) {
+                    return iterator;
+                }
+                current.close();
+                current = null;
+            } else if (queue.size() > 0) {
+                current = queue.poll().get();
+            } else {
+                return null;
+            }
+        }
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (current != null) {
+            current.close();
+        }
+    }
 }

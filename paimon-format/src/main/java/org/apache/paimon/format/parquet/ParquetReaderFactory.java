@@ -37,6 +37,7 @@ import org.apache.paimon.types.DataType;
 import org.apache.paimon.types.RowType;
 import org.apache.paimon.utils.Pool;
 
+import org.apache.paimon.utils.RecyclableIterator;
 import org.apache.parquet.ParquetReadOptions;
 import org.apache.parquet.column.ColumnDescriptor;
 import org.apache.parquet.column.page.PageReadStore;
@@ -369,7 +370,7 @@ public class ParquetReaderFactory implements FormatReaderFactory {
         protected final VectorizedColumnBatch columnarBatch;
         private final Pool.Recycler<ParquetReaderBatch> recycler;
 
-        private final ColumnarRowIterator result;
+        private final ColumnarRow result;
 
         protected ParquetReaderBatch(
                 WritableColumnVector[] writableVectors,
@@ -378,7 +379,7 @@ public class ParquetReaderFactory implements FormatReaderFactory {
             this.writableVectors = writableVectors;
             this.columnarBatch = columnarBatch;
             this.recycler = recycler;
-            this.result = new ColumnarRowIterator(new ColumnarRow(columnarBatch), this::recycle);
+            this.result = new ColumnarRow(columnarBatch);
         }
 
         public void recycle() {
@@ -386,8 +387,19 @@ public class ParquetReaderFactory implements FormatReaderFactory {
         }
 
         public RecordIterator<InternalRow> convertAndGetIterator() {
-            result.set(columnarBatch.getNumRows());
-            return result;
+            return new RecyclableIterator(this::recycle) {
+
+                private boolean visited = false;
+                @Nullable
+                @Override
+                public InternalRow next() throws IOException {
+                    if (!visited) {
+                        visited = true;
+                        return result;
+                    }
+                    return null;
+                }
+            };
         }
     }
 }

@@ -64,6 +64,8 @@ public class AppendOnlyFileStoreRead implements FileStoreRead<InternalRow> {
 
     @Nullable private List<Predicate> filters;
 
+    private boolean useColumnarReader = false;
+
     public AppendOnlyFileStoreRead(
             FileIO fileIO,
             SchemaManager schemaManager,
@@ -93,11 +95,16 @@ public class AppendOnlyFileStoreRead implements FileStoreRead<InternalRow> {
         return this;
     }
 
+    public FileStoreRead<InternalRow> withColumnarReader(boolean useColumnarReader) {
+        this.useColumnarReader = useColumnarReader;
+        return this;
+    }
+
     @Override
     public RecordReader<InternalRow> createReader(DataSplit split) throws IOException {
         DataFilePathFactory dataFilePathFactory =
                 pathFactory.createDataFilePathFactory(split.partition(), split.bucket());
-        List<ConcatRecordReader.ReaderSupplier<InternalRow>> suppliers = new ArrayList<>();
+        List<RecordReader.ReaderSupplier<InternalRow>> suppliers = new ArrayList<>();
         for (DataFileMeta file : split.files()) {
             String formatIdentifier = DataFilePathFactory.formatIdentifier(file.fileName());
             BulkFormatMapping bulkFormatMapping =
@@ -135,7 +142,15 @@ public class AppendOnlyFileStoreRead implements FileStoreRead<InternalRow> {
                             });
             suppliers.add(
                     () ->
-                            new RowDataFileRecordReader(
+                        useColumnarReader ?
+                                new RowDataFileRecordReader(
+                                    fileIO,
+                                    dataFilePathFactory.toPath(file.fileName()),
+                                    bulkFormatMapping.getReaderFactory(),
+                                    bulkFormatMapping.getIndexMapping(),
+                                    bulkFormatMapping.getCastMapping())
+                                :
+                                new RowDataFileRecordReader(
                                     fileIO,
                                     dataFilePathFactory.toPath(file.fileName()),
                                     bulkFormatMapping.getReaderFactory(),

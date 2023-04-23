@@ -36,5 +36,4 @@ public interface FileStoreRead<T> {
     /** Create a {@link RecordReader} from split. */
     RecordReader<T> createReader(DataSplit split) throws IOException;
 
-    FileStoreRead<T> useColumnarRead();
 }

@@ -75,10 +75,4 @@ public class ConcatRecordReader<T> implements RecordReader<T> {
             current.close();
         }
     }
-
-    /** Supplier to get {@link RecordReader}. */
-    @FunctionalInterface
-    public interface ReaderSupplier<T> {
-        RecordReader<T> get() throws IOException;
-    }
 }

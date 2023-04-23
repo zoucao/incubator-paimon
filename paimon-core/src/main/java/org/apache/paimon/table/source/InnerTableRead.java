@@ -46,4 +46,8 @@ public interface InnerTableRead extends TableRead {
     }
 
     InnerTableRead withProjection(int[][] projection);
+
+    default InnerTableRead withColumnarReader(boolean useColumnarReader) {
+        return this;
+    }
 }

@@ -20,6 +20,7 @@ package org.apache.paimon.spark;
 import org.apache.paimon.reader.RecordReader;
 import org.apache.paimon.reader.RecordReaderIterator;
 import org.apache.paimon.table.source.ReadBuilder;
+
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.connector.read.InputPartition;
 import org.apache.spark.sql.connector.read.PartitionReader;
@@ -31,34 +32,36 @@ import java.io.UncheckedIOException;
 
 public class SparkColumnarReaderFactory implements PartitionReaderFactory {
 
-  private final ReadBuilder readBuilder;
+    private final ReadBuilder readBuilder;
 
-  public SparkColumnarReaderFactory(ReadBuilder readBuilder) {
-    this.readBuilder = readBuilder;
-  }
-
-  @Override
-  public PartitionReader<InternalRow> createReader(InputPartition partition) {
-    throw new UnsupportedOperationException("Row-based reads are not supported in ColumnarReader");
-  }
-
-  @Override
-  public PartitionReader<ColumnarBatch> createColumnarReader(InputPartition partition) {
-    RecordReader<org.apache.paimon.data.InternalRow> reader;
-    try {
-      reader = readBuilder.newRead().createReader(((SparkInputPartition) partition).split());
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
+    public SparkColumnarReaderFactory(ReadBuilder readBuilder) {
+        this.readBuilder = readBuilder;
     }
-    RecordReaderIterator<org.apache.paimon.data.InternalRow> iterator = new RecordReaderIterator<>(reader);
-    SparkInternalRow row = new SparkInternalRow(readBuilder.readType());
-    new SparkInputPartitionReader(iterator, row);
 
-    return null;
-  }
+    @Override
+    public PartitionReader<InternalRow> createReader(InputPartition partition) {
+        throw new UnsupportedOperationException(
+                "Row-based reads are not supported in ColumnarReader");
+    }
 
-  @Override
-  public boolean supportColumnarReads(InputPartition partition) {
-    return true;
-  }
+    @Override
+    public PartitionReader<ColumnarBatch> createColumnarReader(InputPartition partition) {
+        RecordReader<org.apache.paimon.data.InternalRow> reader;
+        try {
+            reader = readBuilder.newRead().createReader(((SparkInputPartition) partition).split());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        RecordReaderIterator<org.apache.paimon.data.InternalRow> iterator =
+                new RecordReaderIterator<>(reader);
+        SparkInternalRow row = new SparkInternalRow(readBuilder.readType());
+        new SparkInputPartitionReader(iterator, row);
+
+        return null;
+    }
+
+    @Override
+    public boolean supportColumnarReads(InputPartition partition) {
+        return true;
+    }
 }

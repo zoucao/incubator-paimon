@@ -109,6 +109,8 @@ public interface ReadBuilder extends Serializable {
         return withProjection(nestedProjection);
     }
 
+    ReadBuilder withColumnarReader(boolean useColumnarReader);
+
     /**
      * Push nested projection. For example, {@code [[0, 2, 1], ...]} specifies to include the 2nd
      * field of the 3rd field of the 1st field in the top-level row.

@@ -91,6 +91,12 @@ public interface RecordReader<T> extends Closeable {
         }
     }
 
+    /** Supplier to get {@link RecordReader}. */
+    @FunctionalInterface
+    interface ReaderSupplier<T> {
+        RecordReader<T> get() throws IOException;
+    }
+
     // -------------------------------------------------------------------------
     //                     Util methods
     // -------------------------------------------------------------------------

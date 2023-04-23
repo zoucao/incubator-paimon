@@ -77,6 +77,10 @@ public final class ColumnarRow implements InternalRow, DataSetters, Serializable
         return vectorizedColumnBatch.getArity();
     }
 
+    public int getNumRows() {
+        return vectorizedColumnBatch.getNumRows();
+    }
+
     @Override
     public boolean isNullAt(int pos) {
         return vectorizedColumnBatch.isNullAt(rowId, pos);
